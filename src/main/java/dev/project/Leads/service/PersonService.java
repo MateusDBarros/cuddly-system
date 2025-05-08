@@ -4,8 +4,11 @@ import dev.project.Leads.entities.DTO.PersonRequest;
 import dev.project.Leads.entities.DTO.PersonResponseDTO;
 import dev.project.Leads.entities.model.Person;
 import dev.project.Leads.repository.PersonRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class PersonService {
@@ -18,7 +21,7 @@ public class PersonService {
         this.repository = repository;
     }
 
-    public PersonResponseDTO createUser(PersonRequest dto) {
+    public PersonResponseDTO createPerson(PersonRequest dto) {
         Person person = new Person();
         person.setName(dto.name());
         person.setComment(dto.comment());
@@ -31,6 +34,37 @@ public class PersonService {
         repository.save(person);
 
         return new PersonResponseDTO(person.getId(), person.getName(), person.getEmail(), person.getComment());
-
     }
+
+    public List<PersonResponseDTO> listPerson() {
+        return repository.findAll().stream().map(person -> new PersonResponseDTO(person.getId(), person.getName(), person.getComment(), person.getEmail())).toList();
+    }
+
+    public PersonResponseDTO update(Long id, PersonRequest dto) {
+        Person person = repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Pessoa não encotrada"));
+
+        person.setName(dto.name());
+        person.setEmail(dto.email());
+
+        if (dto.password() != null && !dto.password().isBlank()) {
+            person.setPassword(passwordConfig.encode(dto.password()));
+        }
+
+        repository.save(person);
+
+        return new PersonResponseDTO(
+                person.getId(),
+                person.getName(),
+                person.getEmail(),
+                person.getComment()
+        );
+    }
+
+    public void deletar(Long id) {
+        if (!repository.existsById(id)) {
+            throw new EntityNotFoundException("Pessoa não encontrada");
+        }
+        repository.deleteById(id);
+    }
+
 }
